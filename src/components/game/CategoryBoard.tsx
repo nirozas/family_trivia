@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { CategoryType, DifficultyType, TriviaQuestion } from '../../types/index';
-import { QUESTIONS } from '../../data/questions';
 import { useGame } from '../../store/GameContext';
 import { RotateCw } from 'lucide-react';
 import WheelModal from './WheelModal';
@@ -52,22 +51,22 @@ const DIFF_LABEL: Record<DifficultyType, { pts:string; ring:string }> = {
   hard:   { pts:'300', ring:'#f87171' },
 };
 
-function pickRandom(cat: CategoryType, diff: DifficultyType, answeredIds: string[]): TriviaQuestion | null {
-  const pool = QUESTIONS.filter(q => q.category === cat && q.difficulty === diff);
-  const available = pool.filter(q => !answeredIds.includes(q.id));
-  const finalPool = available.length > 0 ? available : pool;
-  return finalPool.length ? finalPool[Math.floor(Math.random() * finalPool.length)] : null;
+function pickRandom(pool: TriviaQuestion[], cat: CategoryType, diff: DifficultyType, answeredIds: string[]): TriviaQuestion | null {
+  const filtered = pool.filter(q => q.category === cat && q.difficulty === diff);
+  const available = filtered.filter(q => !answeredIds.includes(q.id));
+  const finalPool = available.length > 0 ? available : filtered;
+  return finalPool.length ? finalPool[0] : null; // Already shuffled, just take first
 }
 
-function DiffRow({ cat, onPick }: { cat: CategoryType; onPick:(q:TriviaQuestion)=>void }) {
+function DiffRow({ cat, onPick, pool }: { cat: CategoryType; onPick:(q:TriviaQuestion)=>void; pool: TriviaQuestion[] }) {
   const { gameState } = useGame();
   return (
     <div style={{ display:'flex', gap:'4px', justifyContent:'center', marginTop:'6px' }}>
       {DIFFS.map(diff => {
         const dl = DIFF_LABEL[diff];
-        const pool = QUESTIONS.filter(q => q.category === cat && q.difficulty === diff);
-        const available = pool.filter(q => !gameState.answeredQuestionIds.includes(q.id));
-        const isExhausted = pool.length > 0 && available.length === 0;
+        const diffPool = pool.filter(q => q.category === cat && q.difficulty === diff);
+        const available = diffPool.filter(q => !gameState.answeredQuestionIds.includes(q.id));
+        const isExhausted = diffPool.length > 0 && available.length === 0;
 
         return (
           <motion.button key={diff}
@@ -76,7 +75,7 @@ function DiffRow({ cat, onPick }: { cat: CategoryType; onPick:(q:TriviaQuestion)
             disabled={isExhausted}
             onClick={() => { 
               if (isExhausted) return;
-              const q = pickRandom(cat, diff, gameState.answeredQuestionIds); 
+              const q = pickRandom(pool, cat, diff, gameState.answeredQuestionIds); 
               if(q) onPick(q); 
             }}
             style={{
@@ -99,7 +98,7 @@ function DiffRow({ cat, onPick }: { cat: CategoryType; onPick:(q:TriviaQuestion)
 
 export default function CategoryBoard({ onSelectQuestion }: Props) {
   const [active, setActive] = React.useState<CategoryType | null>(null);
-  const { gameState } = useGame();
+  const { gameState, shuffledPool } = useGame();
   const [isWheelOpen, setIsWheelOpen] = React.useState(false);
 
   return (
@@ -114,7 +113,7 @@ export default function CategoryBoard({ onSelectQuestion }: Props) {
           const isActive = active === cat;
           
           // Check if ALL questions in this category are exhausted
-          const catQuestions = QUESTIONS.filter(q => q.category === cat);
+          const catQuestions = shuffledPool.filter(q => q.category === cat);
           const answeredInCat = catQuestions.filter(q => gameState.answeredQuestionIds.includes(q.id));
           const isExhausted = catQuestions.length > 0 && answeredInCat.length === catQuestions.length;
 
@@ -173,7 +172,7 @@ export default function CategoryBoard({ onSelectQuestion }: Props) {
                 style={{ overflow:'hidden', width:'100%' }}
               >
                 {isActive && (
-                  <DiffRow cat={cat} onPick={(q) => { setActive(null); onSelectQuestion(q); }} />
+                  <DiffRow cat={cat} pool={shuffledPool} onPick={(q) => { setActive(null); onSelectQuestion(q); }} />
                 )}
               </motion.div>
             </motion.div>

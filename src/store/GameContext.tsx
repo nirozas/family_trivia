@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { FamilyGroup, GameState } from '../types/index';
+import type { FamilyGroup, GameState, TriviaQuestion } from '../types/index';
+import { QUESTIONS } from '../data/questions';
 
 type GameContextType = {
   gameState: GameState;
+  shuffledPool: TriviaQuestion[];
   addFamily: (name: string, avatar: string) => void;
   removeFamily: (id: string) => void;
   updateScore: (familyId: string, points: number, isCorrect: boolean) => void;
@@ -26,7 +28,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const saved = localStorage.getItem('heritage_quest_state');
       if (!saved) return defaultState;
       const parsed = JSON.parse(saved);
-      // Migration: handle old 'questionsAnswered' key
       return {
         ...defaultState,
         ...parsed,
@@ -37,6 +38,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
+  const [shuffledPool, setShuffledPool] = useState<TriviaQuestion[]>(() => {
+    const arr = [...QUESTIONS];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  });
+
   useEffect(() => {
     localStorage.setItem('heritage_quest_state', JSON.stringify(gameState));
   }, [gameState]);
@@ -44,11 +54,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addFamily = (name: string, avatar: string) => {
     const newFamily: FamilyGroup = {
       id: Math.random().toString(36).slice(2),
-      name,
-      avatar,
-      score: 0,
-      correctAnswers: 0,
-      wrongAnswers: 0,
+      name, avatar, score: 0, correctAnswers: 0, wrongAnswers: 0,
     };
     setGameState((prev) => ({ ...prev, families: [...prev.families, newFamily] }));
   };
@@ -93,11 +99,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetGame = () => {
     setGameState(defaultState);
     localStorage.removeItem('heritage_quest_state');
+    // Re-shuffle pool for next game
+    const arr = [...QUESTIONS];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    setShuffledPool(arr);
   };
 
   return (
     <GameContext.Provider
-      value={{ gameState, addFamily, removeFamily, updateScore, nextTurn, resetGame, markQuestionAsAnswered }}
+      value={{ gameState, shuffledPool, addFamily, removeFamily, updateScore, nextTurn, resetGame, markQuestionAsAnswered }}
     >
       {children}
     </GameContext.Provider>

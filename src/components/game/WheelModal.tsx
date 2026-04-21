@@ -4,6 +4,7 @@ import { RotateCw, X } from 'lucide-react';
 import type { CategoryType, DifficultyType, TriviaQuestion } from '../../types/index';
 import { QUESTIONS } from '../../data/questions';
 import { soundService } from '../../services/SoundService';
+import { useGame } from '../../store/GameContext';
 
 type Props = {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const DIFF_COLORS = { easy: '#4ade80', medium: '#fbbf24', hard: '#f87171' };
 export default function WheelModal({ isOpen, onClose, onSelect, categories, answeredIds, catConfig }: Props) {
   const [isSpinning, setIsSpinning] = useState(false);
   const controls = useAnimation();
+  const { shuffledPool } = useGame();
   const [result, setResult] = useState<{ cat: CategoryType; diff: DifficultyType } | null>(null);
 
   const totalSegments = categories.length * 3; // 15 * 3 = 45
@@ -58,8 +60,8 @@ export default function WheelModal({ isOpen, onClose, onSelect, categories, answ
     // Reset rotation for next time
     controls.set({ rotate: totalRotation % 360 });
 
-    const pool = QUESTIONS.filter(q => q.category === selectedCat && q.difficulty === selectedDiff);
-    const available = pool.filter(q => !answeredIds.includes(q.id));
+    const filtered = shuffledPool.filter(q => q.category === selectedCat && q.difficulty === selectedDiff);
+    const available = filtered.filter(q => !answeredIds.includes(q.id));
 
     setResult({ cat: selectedCat, diff: selectedDiff });
 
