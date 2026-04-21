@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useGame } from '../../store/GameContext';
 import Leaderboard from './Leaderboard';
 import CategoryBoard from './CategoryBoard';
@@ -6,7 +6,6 @@ import QuestionModal from './QuestionModal';
 import type { TriviaQuestion } from '../../types/index';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Zap, Trophy, Settings } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import ClanEmblem from '../common/ClanEmblem';
 
 type Props = { 
@@ -20,19 +19,11 @@ export default function GameBoard({ onBackToSetup, onEndGame }: Props) {
   const [roundCount, setRoundCount] = useState(0);
 
   const current       = gameState.families[gameState.currentFamilyIndex];
-  const totalRounds   = gameState.families.length * 6;
-  const isGameOver    = roundCount >= totalRounds && totalRounds > 0;
 
-  useEffect(() => {
-    if (isGameOver) {
-      confetti({ particleCount:320, spread:130, origin:{ y:0.3 },
-        colors:['#f59e0b','#4f8ef7','#ec4899','#22c55e','#f87171'] });
-    }
-  }, [isGameOver]);
+  // Manual game end only now
+  const isGameOver = false;
 
-  const leader = isGameOver
-    ? [...gameState.families].sort((a,b) => b.score - a.score)[0]
-    : null;
+  const leader = [...gameState.families].sort((a,b) => b.score-a.score)[0] || null;
 
   const advance = (correct: boolean, pts: number) => {
     if (!activeQ || !current) return;
